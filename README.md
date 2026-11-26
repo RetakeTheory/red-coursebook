@@ -50,4 +50,4 @@ python package_mac.py
 
 ## 鸣谢与许可
 
-开发制作为 **reshi**，题库提供者为 **Miraitowa**。本项目软件采用 [MIT License](LICENSE)。题库按提供的课程材料整理，鸣谢头像由提供者提供。第三方组件的许可随程序保留。
+**reshi** 开发红课题本，**Miraitowa** 提供习概题库，**ailing** 提供毛概题库。本项目软件采用 [MIT License](LICENSE)。题库按提供的课程材料整理，鸣谢头像由提供者提供。第三方组件的许可随程序保留。

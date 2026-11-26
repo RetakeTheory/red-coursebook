@@ -262,7 +262,8 @@ function credits(){
   const people=[
     {role:'开发制作',name:'reshi',glyph:'device',photo:'reshi.jpg',contact:'QQ: 2377378565',
       thumbnails:'reshi-44.png 1x, reshi-88.png 2x, reshi-132.png 3x, reshi-176.png 4x'},
-    {role:'题库提供者',name:'Miraitowa',glyph:'book',photo:'miraitowa.jpg'}
+    {role:'习概题库提供者',name:'Miraitowa',glyph:'book',photo:'miraitowa.jpg'},
+    {role:'毛概题库提供者',name:'ailing',glyph:'book',photo:'ailing.jpg'}
   ];
   for(const {role,name,glyph,photo,contact,thumbnails} of people){
     const item=el('div'),label=el('dt'),person=el('dd');

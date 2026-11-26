@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix="redcoursebook-check-") as tmp:
             except OSError:pass
             time.sleep(.3)
         else:raise RuntimeError("Desktop application did not start")
-        assets=["bank.json","mao.json","app.mjs","style.css","reshi.jpg","miraitowa.jpg","LICENSE.txt"]
+        assets=["bank.json","mao.json","app.mjs","style.css","reshi.jpg","miraitowa.jpg","ailing.jpg","LICENSE.txt"]
         assets.extend(f"reshi-{size}.png" for size in [44,88,132,176])
         for asset in assets:
             with urllib.request.urlopen(base+asset,timeout=5) as r:served=r.read()
