@@ -1,0 +1,6 @@
+{
+  "name": "red-coursebook-android-ui",
+  "private": true,
+  "scripts": {"bundle": "esbuild mobile/main.mjs --bundle --format=iife --target=chrome58 --charset=utf8 --log-level=warning"},
+  "devDependencies": {"esbuild": "0.25.12"}
+}

@@ -1,6 +1,6 @@
 # 红课题本
 
-红课题本是可离线使用的桌面练习工具。2026 秋季版内置两门课的题干、选项和答案，打开程序后可在页面顶部切换题库。
+红课题本可在 Android、Windows 和 macOS 上离线刷题。2026 秋季版内置两门课的题干、选项和答案，打开程序后可在页面顶部切换题库。
 
 | 题库 | 单选 | 多选 | 范围 |
 | --- | ---: | ---: | --- |
@@ -13,6 +13,7 @@
 
 | 系统 | 使用方法 |
 | --- | --- |
+| Android 8.0 或更新版本 | 在手机上打开 `RedCoursebook-Android.apk` 安装，随后从桌面打开「红课题本」。 |
 | Windows x64 | 双击 `RedCoursebook-Windows-x64.exe`。界面使用系统的 Microsoft Edge WebView2 运行时。 |
 | macOS 14 或更新版本 | 解压 `RedCoursebook-macOS-universal.zip`，打开「红课题本.app」。同一个包支持 Apple Silicon 和 Intel。 |
 
@@ -25,7 +26,7 @@
 - 测试交卷后可查看成绩和逐题答案。每题 3 分，多选须全部选对，所有题都作答后即可交卷。
 - **错题本**收录练习和已交卷测试中的错题。重练答对后移出。
 - 开始作答前可选择**打乱选项顺序**。屏幕上的字母会随选项重新排列，本轮返回题目或重开程序时沿用相同顺序。
-- 右侧答题卡可以跳题，同时显示答题进度与用时。测试从开卷计时至交卷。练习记录、未完成测试和显示偏好保存在当前设备。
+- 答题卡可以跳题，也会显示答题进度与用时。手机版点右上角「答题卡」展开，底部可切换练习、测试、错题本和鸣谢。测试从开卷计时至交卷，记录保存在当前设备。
 - 两门课程分别保存练习位置、答题、错题和测试。打开新版会接续旧版的习概、毛概记录。
 
 ## 构建
@@ -45,6 +46,15 @@ Windows 可执行文件位于 `build/dist/RedCoursebook/`。在 macOS 上可用�
 python -m pip install Pillow
 python package_mac.py
 ```
+
+Android 版使用系统 WebView，共用桌面版的题库和判分逻辑。构建时使用 JDK 17 或更新版本、Android SDK Platform 35 和 Build Tools 35.0.0。设置 `JAVA_HOME` 与 `ANDROID_HOME` 后，在项目根目录运行以下命令生成未签名 APK。
+
+```sh
+npm ci --prefix android
+python android/build.py
+```
+
+生成可安装的签名版时，用环境变量 `REDBOOK_KEYSTORE_PASSWORD` 提供本机密钥库密码，再运行 `python android/build.py --keystore <密钥库路径> --alias <别名>`。成品位于 `build/release/RedCoursebook-Android.apk`。
 
 习概结构化题库位于 `site/bank.json`，可用 `python import_bank.py "习概题库.docx"` 重新生成。毛概结构化题库位于 `site/mao.json`，可将原始 Word 97–2003 文档另存为 DOCX，再运行 `python import_mao.py "毛概题库.docx"`。毛概题目标识保留了原章、原题型区和原题号。
 

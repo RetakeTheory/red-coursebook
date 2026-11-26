@@ -1,4 +1,4 @@
-name: Check macOS desktop release
+name: Check macOS and Android release
 on:
   release:
     types: [published]
@@ -6,7 +6,7 @@ on:
     inputs:
       tag:
         description: Release tag to verify
-        default: v1.2.1
+        default: v1.3.0
         required: true
 permissions:
   contents: read
@@ -25,3 +25,27 @@ jobs:
         run: gh release download "$RELEASE_TAG" --pattern 'RedCoursebook-macOS-universal.zip' --dir "$RUNNER_TEMP"
       - name: Verify and launch the released app
         run: python3 tests/macos_smoke.py "$RUNNER_TEMP/RedCoursebook-macOS-universal.zip"
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build Android from source
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
+          npm ci --prefix android
+          python3 android/build.py
+      - name: Download and verify the signed APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          gh release download "$RELEASE_TAG" --pattern 'RedCoursebook-Android.apk' --dir "$RUNNER_TEMP"
+          python3 tests/android_release.py "$RUNNER_TEMP/RedCoursebook-Android.apk"

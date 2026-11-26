@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="application-version" content="{{VERSION}}">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>红课题本</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="mobile.css">
+  <script defer src="book.js"></script>
+</head>
+<body>
+  <header class="titlebar">
+    <div class="window-title"><img src="mark.svg" alt=""><strong>红课题本</strong></div>
+    <div class="title-actions">
+      <button id="open-sheet" class="quiet" aria-haspopup="dialog" aria-controls="answer-sheet"><span data-i="grid"></span>答题卡</button>
+      <button id="theme" class="quiet" aria-label="切换外观" aria-haspopup="menu" aria-expanded="false"><span data-i="monitor"></span><span id="theme-caption" class="sr">跟随系统</span></button>
+      <div id="theme-menu" role="menu" aria-label="选择外观" hidden></div>
+    </div>
+  </header>
+  <main id="main">
+    <header class="course-header">
+      <div id="course-context">
+        <div class="course-picker">
+          <div class="course-switch" role="group" aria-label="选择题库">
+            <button type="button" data-bank="xi">习概</button><button type="button" data-bank="mao">毛概</button>
+          </div>
+          <span class="mobile-term"><span data-i="calendar"></span><span id="term"></span></span>
+        </div>
+        <p id="course-name" class="course-name"></p>
+      </div>
+      <div class="page-heading"><h1 id="mode-title">练习模式</h1><button id="setup-button" class="quiet" data-action="setup" hidden><span data-i="swap"></span><span id="setup-label">练习设置</span></button></div>
+      <div id="filters" class="mobile-filters" role="group" aria-label="练习题型" hidden>
+        <button data-kind="all"><span>全部</span><span></span></button>
+        <button data-kind="single"><span>单选</span><span></span></button>
+        <button data-kind="multi"><span>多选</span><span></span></button>
+      </div>
+    </header>
+    <div class="workspace"><section id="desk" aria-label="题目与作答"><p>正在载入题库…</p></section></div>
+    <div class="mobile-storage"><span id="storage-status" role="status">进度保存在本机</span></div>
+  </main>
+  <nav class="mobile-nav" aria-label="刷题导航">
+    <button data-mode="practice"><span data-i="book"></span><span>练习</span></button>
+    <button data-mode="test"><span data-i="paper"></span><span>测试</span></button>
+    <button data-mode="wrong"><span data-i="bookmark"></span><span>错题本</span><b id="wrong-count" aria-hidden="true">0</b></button>
+    <button data-mode="credits"><span data-i="heart"></span><span>鸣谢</span></button>
+  </nav>
+  <dialog id="answer-sheet" aria-labelledby="sheet-title">
+    <section id="side">
+      <div class="sheet-heading"><h2 id="sheet-title"><span data-i="grid"></span>答题卡</h2>
+        <button id="close-sheet" class="quiet" aria-label="关闭答题卡"><span data-i="close"></span></button></div>
+      <div id="progress"></div><div id="map"></div>
+    </section>
+  </dialog>
+  <div id="announce" class="sr" aria-live="polite"></div>
+</body>
+</html>

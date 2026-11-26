@@ -34,7 +34,9 @@ export function orderedOptions(question,seed){
   return a;
 }
 export function shownLetters(options,canonical){
-  return options.flatMap((o,i)=>canonical.includes(o.key)?[String.fromCharCode(65+i)]:[]).join('、');
+  const letters=[];
+  options.forEach((option,index)=>{if(canonical.includes(option.key))letters.push(String.fromCharCode(65+index));});
+  return letters.join('、');
 }
 export function newTest(bank,now=Date.now(),seed=0,format='random'){
   const pool=type=>bank.filter(q=>q.kind===type).map(q=>q.id);

@@ -1,0 +1,14 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="net.reshi.redcoursebook">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+    <application android:label="红课题本" android:icon="@mipmap/book"
+        android:theme="@style/CoursebookTheme" android:allowBackup="false"
+        android:usesCleartextTraffic="false" android:enableOnBackInvokedCallback="true">
+        <activity android:name=".CoursebookActivity" android:exported="true"
+            android:configChanges="keyboardHidden|orientation|screenSize|smallestScreenSize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

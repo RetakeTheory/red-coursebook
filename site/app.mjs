@@ -8,6 +8,7 @@ const modes={practice:'练习模式',test:'测试模式',wrong:'错题本',credi
 const kinds={single:'单选题',multi:'多选题'};
 const themes={system:['monitor','跟随系统'],light:['sun','浅色'],dark:['moon','深色']};
 const scheme=matchMedia('(prefers-color-scheme: dark)');
+const owns=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
 const bankFiles={xi:'bank.json',mao:'mao.json'},banks=new Map();
 const freshPrefs=()=>({mode:'practice',kind:'all',chapter:'all',theme:'system',place:{},
   shuffle:false,practiceSetup:true,wrongSetup:true,testSetup:false,testFormat:'random',practiceSeed:0,practiceStarted:false,practiceEpoch:0});
@@ -86,8 +87,9 @@ function elapsed(){
 }
 function clockUpdate(){const out=$('clock');if(out)out.textContent=clockText(elapsed());}
 function theme(value){
-  prefs.theme=Object.hasOwn(themes,value)?value:'system';
-  document.documentElement.dataset.appearance=prefs.theme==='system'?(scheme.matches?'dark':'light'):prefs.theme;
+  prefs.theme=owns(themes,value)?value:'system';
+  const systemDark=window.coursebookSystemDark??scheme.matches;
+  document.documentElement.dataset.appearance=prefs.theme==='system'?(systemDark?'dark':'light'):prefs.theme;
   const [glyph,name]=themes[prefs.theme];
   $('theme').firstElementChild.replaceWith(icon(glyph));$('theme-caption').textContent=name;
   for(const b of $('theme-menu').children)b.setAttribute('aria-checked',String(b.dataset.theme===prefs.theme));
@@ -109,7 +111,7 @@ function beginReview(){
   review={ids:mistakes(),at:0,attempts:{},elapsed:0,seed:orderSeed(prefs.shuffle)};saveReview();
 }
 function changeMode(mode){
-  if(!Object.hasOwn(modes,mode)||prefs.mode===mode)return;
+  if(!owns(modes,mode)||prefs.mode===mode)return;
   stopClock();
   if(mode==='credits')prefs.returnMode=prefs.mode;
   if(mode==='wrong')prefs.wrongSetup=true;
@@ -293,7 +295,8 @@ function credits(){
     item.append(label,person);
     list.append(item);
   }
-  const title=['红课题本',window.NL_APPVERSION].filter(Boolean).join(' ');
+  const version=window.NL_APPVERSION||document.querySelector('meta[name="application-version"]')?.content;
+  const title=['红课题本',version].filter(Boolean).join(' ');
   box.append(list,el('p','meta-note',title+'　/　MIT License'),button('返回刷题','left','return-reading'),preview);
   return box;
 }
@@ -464,7 +467,8 @@ function setHandlers(){
     prefs.chapter=id;setPrefs();render();$('practice-chapter')?.focus({preventScroll:true});
   });
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('theme-menu').hidden){$('theme-menu').hidden=true;$('theme').setAttribute('aria-expanded','false');$('theme').focus();}});
-  scheme.addEventListener('change',()=>theme(prefs.theme));
+  const syncTheme=()=>theme(prefs.theme);
+  if(scheme.addEventListener)scheme.addEventListener('change',syncTheme);else scheme.addListener(syncTheme);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopClock();else startClock();});
   window.addEventListener('pagehide',stopClock);
   if(native){
@@ -484,7 +488,7 @@ function openBank(id){
   questions=bank.questions;byId=new Map(questions.map(q=>[q.id,q]));chapters=new Map((bank.chapters||[]).map(c=>[c.id,c]));
   prefs=freshPrefs();records={};exam=null;review={ids:[],at:0,attempts:{},elapsed:0};
   const p=readCourse('prefs')||{};
-  if(Object.hasOwn(modes,p.mode))prefs.mode=p.mode;
+  if(owns(modes,p.mode))prefs.mode=p.mode;
   if(['all','single','multi'].includes(p.kind))prefs.kind=p.kind;
   if(chapters.has(p.chapter))prefs.chapter=p.chapter;
   if(id==='mao'&&p.testFormat==='full')prefs.testFormat='full';

@@ -29,8 +29,8 @@ export function icon(name,extra=''){
 export function questionText(text){
   const fragment=document.createDocumentFragment();
   const empty=/[（(][\s\u200b\ufeff]*[)）]/gu;
-  let prior=0;
-  for(const match of text.matchAll(empty)){
+  let prior=0,match;
+  while((match=empty.exec(text))!==null){
     fragment.append(text.slice(prior,match.index));
     const s=document.createElementNS(ns,'svg'),line=document.createElementNS(ns,'line');
     s.setAttribute('class','blank-line');s.setAttribute('viewBox','0 0 60 16');s.setAttribute('preserveAspectRatio','none');

@@ -1,0 +1,7 @@
+<resources>
+    <color name="book_blue">#284B70</color>
+    <style name="CoursebookTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F3F6FA</item>
+        <item name="android:colorAccent">@color/book_blue</item>
+    </style>
+</resources>
