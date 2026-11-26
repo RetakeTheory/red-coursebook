@@ -1,6 +1,7 @@
 """Verify the published bundle on macOS, launch its process and check its served assets."""
 from pathlib import Path
 import hashlib
+import json
 import os
 import plistlib
 import socket
@@ -18,6 +19,7 @@ with tempfile.TemporaryDirectory(prefix="redcoursebook-check-") as tmp:
     info=plistlib.loads((app/"Contents/Info.plist").read_bytes())
     binary=app/"Contents/MacOS"/info["CFBundleExecutable"]
     assert info["CFBundleIdentifier"]=="net.reshi.redcoursebook" and os.access(binary,os.X_OK)
+    assert info["CFBundleShortVersionString"]==json.loads((ROOT/"neutralino.config.json").read_text())["version"]
     subprocess.run(["codesign","--verify","--deep","--strict","--verbose=2",str(app)],check=True)
     arches=subprocess.check_output(["lipo","-archs",str(binary)],text=True).split()
     assert set(arches)=={"arm64","x86_64"}
@@ -34,7 +36,9 @@ with tempfile.TemporaryDirectory(prefix="redcoursebook-check-") as tmp:
             except OSError:pass
             time.sleep(.3)
         else:raise RuntimeError("Desktop application did not start")
-        for asset in ["bank.json","app.mjs","style.css","miraitowa.jpg","LICENSE.txt"]:
+        assets=["bank.json","app.mjs","style.css","reshi.jpg","miraitowa.jpg","LICENSE.txt"]
+        assets.extend(f"reshi-{size}.png" for size in [44,88,132,176])
+        for asset in assets:
             with urllib.request.urlopen(base+asset,timeout=5) as r:served=r.read()
             assert served==(ROOT/"site"/asset).read_bytes(),asset
         print("Native launch, universal architectures, Apple code signature and bundled assets verified",flush=True)

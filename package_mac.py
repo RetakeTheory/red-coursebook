@@ -1,4 +1,5 @@
 import hashlib
+import json
 from pathlib import Path
 import plistlib
 import shutil
@@ -79,10 +80,11 @@ def package():
     dest=CONTENTS/"MacOS"/"RedCoursebook";dest.parent.mkdir(exist_ok=True)
     shutil.copy2(PRODUCT/"RedCoursebook-mac_universal",dest)
     versions=slices(dest)
+    release_version=json.loads((ROOT/"neutralino.config.json").read_text(encoding="utf-8"))["version"]
     def version(v):return ".".join(str(i) for i in v[:2])
     plist={"CFBundleName":NAME,"CFBundleDisplayName":NAME,"CFBundleExecutable":"RedCoursebook",
            "CFBundleIdentifier":"net.reshi.redcoursebook","CFBundlePackageType":"APPL","CFBundleSignature":"????",
-           "CFBundleShortVersionString":"1.0.0","CFBundleVersion":"1","NSHighResolutionCapable":True,
+           "CFBundleShortVersionString":release_version,"CFBundleVersion":release_version,"NSHighResolutionCapable":True,
            "CFBundleDevelopmentRegion":"zh_CN","CFBundleIconFile":"Coursebook.icns",
            "LSMinimumSystemVersion":version(min(versions.values())),
            "LSMinimumSystemVersionByArchitecture":{k:version(v) for k,v in versions.items()}}

@@ -170,13 +170,55 @@ function blankWrong(){
   box.append(sym,el('h2','','错题本是空的'),el('p','','练习或测试中答错的题会收在这里，重练答对后就能移出。'),button('去练习','book','to-practice','primary'));return box;
 }
 function credits(){
-  const box=el('article','card credits'),list=el('dl','credits-list');
-  for(const [role,name,glyph] of [['开发制作','reshi','device'],['题库提供者','Miraitowa','book']]){
-    const item=el('div'),dt=el('dt'),dd=el('dd');dt.append(icon(glyph),role);
-    if(name==='Miraitowa'){const avatar=el('img','avatar');avatar.src='miraitowa.jpg';avatar.width=44;avatar.height=44;avatar.alt='';dd.append(avatar);}
-    dd.append(name);item.append(dt,dd);list.append(item);
+  const box=el('article','card credits');
+  const list=el('dl','credits-list');
+  const preview=el('dialog','portrait-preview');
+  const fullImage=el('img');
+  const close=el('button','portrait-close');
+  close.type='button';
+  close.autofocus=true;
+  close.setAttribute('aria-label','关闭头像');
+  close.append(icon('close'));
+  close.addEventListener('click',()=>preview.close());
+  preview.addEventListener('click',event=>{if(event.target===preview)preview.close();});
+  preview.append(fullImage,close);
+
+  const people=[
+    {role:'开发制作',name:'reshi',glyph:'device',photo:'reshi.jpg',contact:'QQ: 2377378565',
+      thumbnails:'reshi-44.png 1x, reshi-88.png 2x, reshi-132.png 3x, reshi-176.png 4x'},
+    {role:'题库提供者',name:'Miraitowa',glyph:'book',photo:'miraitowa.jpg'}
+  ];
+  for(const {role,name,glyph,photo,contact,thumbnails} of people){
+    const item=el('div'),label=el('dt'),person=el('dd');
+    label.append(icon(glyph),role);
+    const portrait=el('button','portrait-open');
+    portrait.type='button';
+    portrait.setAttribute('aria-label','查看 '+name+' 的高清头像');
+    portrait.setAttribute('aria-haspopup','dialog');
+    const avatar=el('img','avatar');
+    if(thumbnails)avatar.srcset=thumbnails;
+    avatar.src=photo;
+    avatar.width=44;
+    avatar.height=44;
+    avatar.alt='';
+    portrait.append(avatar);
+    portrait.addEventListener('click',()=>{
+      const title=name+' 的头像';
+      preview.setAttribute('aria-label',title);
+      fullImage.alt=title;
+      fullImage.src=photo;
+      preview.showModal();
+    });
+    const identity=el('div','credit-identity');
+    identity.append(el('span','credit-name',name));
+    if(contact)identity.append(el('span','credit-contact',contact));
+    person.append(portrait,identity);
+    item.append(label,person);
+    list.append(item);
   }
-  box.append(list,el('p','meta-note','红课题本 1.0.0　/　MIT License'),button('返回刷题','left','return-reading'));return box;
+  const title=['红课题本',window.NL_APPVERSION].filter(Boolean).join(' ');
+  box.append(list,el('p','meta-note',title+'　/　MIT License'),button('返回刷题','left','return-reading'),preview);
+  return box;
 }
 function questionCard(q,ids,at){
   const e=entry(q.id),isTest=prefs.mode==='test',correct=e.picked===q.answer;
