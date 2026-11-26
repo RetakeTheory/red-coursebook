@@ -36,9 +36,10 @@ export function orderedOptions(question,seed){
 export function shownLetters(options,canonical){
   return options.flatMap((o,i)=>canonical.includes(o.key)?[String.fromCharCode(65+i)]:[]).join('、');
 }
-export function newTest(bank,now=Date.now(),seed=0){
+export function newTest(bank,now=Date.now(),seed=0,format='random'){
   const pool=type=>bank.filter(q=>q.kind===type).map(q=>q.id);
-  return {ids:[...sample(pool('single'),testCounts.single),...sample(pool('multi'),testCounts.multi)],picks:{},at:0,started:now,finished:0,view:'answer',seed};
+  const ids=format==='full'?bank.map(q=>q.id):[...sample(pool('single'),testCounts.single),...sample(pool('multi'),testCounts.multi)];
+  return {format,ids,picks:{},at:0,started:now,finished:0,view:'answer',seed};
 }
 export function testResult(exam,byId){
   const right=exam.ids.filter(id=>exam.picks[id]===byId.get(id).answer).length;

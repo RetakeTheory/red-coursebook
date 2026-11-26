@@ -10,7 +10,7 @@ const themes={system:['monitor','跟随系统'],light:['sun','浅色'],dark:['mo
 const scheme=matchMedia('(prefers-color-scheme: dark)');
 const bankFiles={xi:'bank.json',mao:'mao.json'},banks=new Map();
 const freshPrefs=()=>({mode:'practice',kind:'all',chapter:'all',theme:'system',place:{},
-  shuffle:false,practiceSetup:true,wrongSetup:true,testSetup:false,practiceSeed:0,practiceStarted:false});
+  shuffle:false,practiceSetup:true,wrongSetup:true,testSetup:false,testFormat:'random',practiceSeed:0,practiceStarted:false,practiceEpoch:0});
 let bankId='xi',saved={},questions=[],byId=new Map(),chapters=new Map(),records={},prefs=freshPrefs(),exam=null;
 let review={ids:[],at:0,attempts:{},elapsed:0},practiceMs=0,tickStart=null,booted=false,busy=false;
 const page=()=>$('desk');
@@ -23,8 +23,16 @@ const setPrefs=()=>saveCourse('prefs',prefs);
 const saveLibrary=()=>save('library',{bank:bankId,theme:prefs.theme});
 const saveRecord=id=>saveCourse('q_'+id,records[id]);
 const saveReview=()=>saveCourse('review',review);
-const saveExam=()=>saveCourse('exam',exam);
-const record=id=>records[id]||(records[id]={picked:'',graded:false,wrong:false});
+const examKey=()=>prefs.testFormat==='full'?'exam_full':'exam';
+const saveExam=()=>saveCourse(examKey(),exam);
+function record(id){
+  const r=records[id];
+  // One preference write resets every practice answer, including older unversioned saves.
+  if(!r||(r.practiceEpoch??0)!==prefs.practiceEpoch){
+    records[id]={picked:'',graded:false,wrong:!!r?.wrong,practiceEpoch:prefs.practiceEpoch};
+  }
+  return records[id];
+}
 const mistakes=()=>questions.filter(q=>records[q.id]?.wrong).map(q=>q.id);
 const wrongNumber=()=>mistakes().length;
 const clipped=(n,len)=>Math.max(0,Math.min(Number.isInteger(n)?n:0,len-1));
@@ -66,12 +74,14 @@ function stopClock(){
   if(tickStart===null)return;
   const delta=Math.max(0,performance.now()-tickStart);tickStart=null;
   if(prefs.mode==='wrong'){review.elapsed+=delta;saveReview();}
-  else if(prefs.mode==='practice'){practiceMs+=delta;saveCourse('practice_time',practiceMs);}
+  else if(prefs.mode==='practice'){
+    practiceMs+=delta;saveCourse('practice_time',{epoch:prefs.practiceEpoch,ms:practiceMs});
+  }
 }
 function startClock(){if(tickStart===null&&timerActive())tickStart=performance.now();}
 function elapsed(){
+  if(prefs.mode==='test')return exam&&!(settingUp()&&exam.finished)?Math.max(0,(exam.finished||Date.now())-exam.started):0;
   if(settingUp()&&prefs.mode!=='practice')return 0;
-  if(prefs.mode==='test')return exam?Math.max(0,(exam.finished||Date.now())-exam.started):0;
   return (prefs.mode==='wrong'?review.elapsed:practiceMs)+(tickStart===null?0:Math.max(0,performance.now()-tickStart));
 }
 function clockUpdate(){const out=$('clock');if(out)out.textContent=clockText(elapsed());}
@@ -146,6 +156,25 @@ function shuffleOption(){
   const label=el('span','toggle-choice');label.append(icon('swap'),el('strong','','打乱选项顺序'));
   const sw=el('span','switch-track');sw.setAttribute('aria-hidden','true');sw.append(el('span'));line.append(label,sw);return line;
 }
+function confirmPracticeReset(){
+  const name=bankId==='mao'?'毛概':'习概';
+  const dialog=el('dialog','reset-dialog'),heading=el('h2','','重置'+name+'的练习进度？');
+  heading.id='reset-heading';dialog.setAttribute('aria-labelledby',heading.id);
+  const message=el('p','','本题库所有练习的作答、位置和用时会清零。错题本和测试记录会保留。');
+  message.id='reset-detail';dialog.setAttribute('aria-describedby',message.id);
+  const actions=el('div','action-group'),cancel=el('button','pill ghost','取消'),confirm=el('button','pill danger','确认重置');
+  cancel.type=confirm.type='button';cancel.autofocus=true;
+  cancel.addEventListener('click',()=>dialog.close());
+  confirm.addEventListener('click',()=>dialog.close('reset'));
+  dialog.addEventListener('close',()=>{
+    dialog.remove();
+    if(dialog.returnValue!=='reset')return;
+    prefs.practiceEpoch++;prefs.place={};prefs.practiceStarted=false;prefs.practiceSeed=0;practiceMs=0;
+    setPrefs();render();page().querySelector('[data-action=start-practice]')?.focus({preventScroll:true});
+    announce(name+'练习进度已重置');
+  },{once:true});
+  actions.append(cancel,confirm);dialog.append(heading,message,actions);document.body.append(dialog);dialog.showModal();
+}
 function practiceForm(wrong){
   const box=el('article','card welcome'),sym=el('div','mode-symbol');sym.append(icon(wrong?'bookmark':'book'));
   box.append(sym,el('h2','',wrong?'错题重练':'开始练习'),el('p','',wrong?'当前有 '+wrongNumber()+' 道错题。答对一题，错题本就少一题。':'单选点选后立即判题，多选选齐后确认答案。'));
@@ -168,18 +197,38 @@ function practiceForm(wrong){
     }
     box.append(group);
   }
-  box.append(shuffleOption(),button(wrong?'开始重练':prefs.practiceStarted?'继续练习':'开始答题','next',wrong?'start-wrong':'start-practice','primary'));return box;
+  const actions=el('div','action-group');
+  actions.append(button(wrong?'开始重练':prefs.practiceStarted?'继续练习':'开始答题','next',wrong?'start-wrong':'start-practice','primary'));
+  if(!wrong){
+    const reset=button('重置练习进度','replay','reset-practice');
+    reset.setAttribute('aria-haspopup','dialog');actions.append(reset);
+  }
+  box.append(shuffleOption(),actions);return box;
 }
 function testForm(){
   const box=el('article','card welcome'),sym=el('div','mode-symbol');sym.append(icon('paper'));
-  box.append(sym,el('h2','','随机组卷'),el('p','','从当前课程的完整题库抽取 20 道题。作答期间可以改选，交卷后查看得分和逐题答案。'));
+  const mao=bankId==='mao',full=prefs.testFormat==='full';
+  box.append(sym,el('h2','',mao?'全册测试':'随机组卷'));
+  if(mao){
+    const choices=el('div','course-switch test-formats');choices.setAttribute('role','group');choices.setAttribute('aria-label','选择毛概试卷');
+    for(const [value,label] of [['random','全册随机 '+testLength+' 题'],['full','全做 '+questions.length+' 题']]){
+      const b=el('button','',label);b.type='button';b.dataset.format=value;b.setAttribute('aria-pressed',String(value===prefs.testFormat));choices.append(b);
+    }
+    box.append(choices);
+  }
+  box.append(el('p','',full?'按导论至第八章的顺序作答。可以分次完成，交卷后查看成绩。':'从全册随机抽题。作答期间可以改选，交卷后查看成绩。'));
+  const single=full?questions.filter(q=>q.kind==='single').length:testCounts.single;
+  const multi=full?questions.length-single:testCounts.multi;
   const list=el('div','test-rules');
-  for(const [glyph,label,value] of [['list','单选题',testCounts.single+' 道'],['multiple','多选题',testCounts.multi+' 道'],['award','试卷满分',testLength*pointsPerQuestion+' 分']]){
+  for(const [glyph,label,value] of [['list','单选题',single+' 道'],['multiple','多选题',multi+' 道'],['award','试卷满分',(single+multi)*pointsPerQuestion+' 分']]){
     const item=el('div','test-rule');item.append(icon(glyph),el('small','',label),el('strong','',value));list.append(item);
   }
-  const actions=el('div','action-group');actions.append(button('开始测试','next','start-test','primary'));
+  const ongoing=exam&&!exam.finished;
+  const actions=el('div','action-group');actions.append(button(ongoing?'继续测试':'开始测试','next','start-test','primary'));
   if(exam?.finished)actions.append(button('上次成绩','award','summary'));
-  box.append(list,el('p','meta-note','每题 '+pointsPerQuestion+' 分。多选题须全部选对。'),shuffleOption(),actions);return box;
+  box.append(list,el('p','meta-note','每题 '+pointsPerQuestion+' 分。多选题须全部选对。'));
+  if(!ongoing)box.append(shuffleOption());
+  box.append(actions);return box;
 }
 function summary(){
   const box=el('article','card summary'),r=testResult(exam,byId),score=el('div','score-large');
@@ -301,20 +350,20 @@ function questionCard(q,ids,at){
 }
 function renderRight(ids,at){
   const isTest=prefs.mode==='test',testDone=isTest&&!!exam?.finished;
-  const setup=settingUp(),fresh=setup&&prefs.mode!=='practice';
+  const setup=settingUp(),ongoing=isTest&&exam&&!exam.finished,fresh=setup&&prefs.mode!=='practice'&&!ongoing;
   const done=fresh?0:ids.filter(id=>isTest?!!exam?.picks[id]:entry(id).graded).length;
-  const total=fresh?(isTest?testLength:wrongNumber()):ids.length;
+  const total=fresh?(isTest?(prefs.testFormat==='full'?questions.length:testLength):wrongNumber()):ids.length;
   const pair=(glyph,text,out)=>{const row=el('div','stat-pair'),label=el('span');label.append(icon(glyph),text);row.append(label,out);return row;};
   const progress=el('output','',''+done+' / '+total),clock=el('output');clock.id='clock';clock.textContent=clockText(elapsed());
   const meter=el('div','bar'),fill=el('span');meter.setAttribute('role','progressbar');meter.setAttribute('aria-label','答题进度');meter.setAttribute('aria-valuenow',String(done));meter.setAttribute('aria-valuemax',String(total||1));meter.setAttribute('aria-valuemin','0');fill.style.width=(total?100*done/total:0)+'%';meter.append(fill);
   $('progress').replaceChildren(pair('progress','答题进度',progress),meter,pair('clock','答题时间',clock));
   const holder=$('map');holder.replaceChildren();
-  if(setup||!ids.length){holder.append(el('p','meta-note',total?'开始作答后，可在这里点题号跳转。':'当前没有待练的错题。'));return;}
+  if(setup||!ids.length){holder.append(el('p','meta-note',ongoing?'继续测试后，可在这里点题号跳转。':total?'开始作答后，可在这里点题号跳转。':'当前没有待练的错题。'));return;}
   const legend=el('div','legend');
   const entries=isTest&&!testDone?[['current','当前'],['marked','已答'],['empty','未答']]:[['current','当前'],['correct','答对'],['mistake','答错'],['empty','未答']];
   for(const [glyph,text] of entries){const l=el('span');l.append(icon(glyph,glyph==='correct'?'good-mark':glyph==='mistake'?'bad-mark':''),text);legend.append(l);}
   holder.append(legend);
-  const perChapter=chapters.size>0&&!isTest;
+  const perChapter=chapters.size>0&&(!isTest||exam.format==='full');
   const groups=perChapter?[...chapters.values()].map(c=>[c.id,chapterName(c)]):Object.entries(kinds);
   const indexed=ids.map((id,i)=>[byId.get(id),i]);
   for(const [key,name] of groups){
@@ -342,7 +391,9 @@ function render(){
   const onCredits=prefs.mode==='credits';$('side').hidden=onCredits;page().parentElement.classList.toggle('solo',onCredits);
   if(onCredits){$('filters').hidden=true;$('setup-button').hidden=true;page().replaceChildren(credits());return;}
   $('filters').hidden=prefs.mode!=='practice'||settingUp();for(const b of document.querySelectorAll('[data-kind]'))b.setAttribute('aria-pressed',String(b.dataset.kind===prefs.kind));
-  $('setup-button').hidden=settingUp()||prefs.mode==='test';
+  const inTest=prefs.mode==='test';
+  $('setup-button').hidden=settingUp()||(inTest&&bankId!=='mao');
+  $('setup-label').textContent=inTest?'测试设置':'练习设置';
   const ids=panelIds(),at=currentIndex(ids);
   const card=settingUp()?(prefs.mode==='test'?testForm():prefs.mode==='wrong'&&!wrongNumber()?blankWrong():practiceForm(prefs.mode==='wrong')):
     prefs.mode==='test'&&exam.finished&&exam.view==='summary'?summary():
@@ -373,6 +424,10 @@ function setHandlers(){
     if(!booted)return;
     if(b.dataset.bank){switchBank(b.dataset.bank);return;}
     if(b.dataset.mode){changeMode(b.dataset.mode);return;}
+    if(b.dataset.format){
+      prefs.testFormat=b.dataset.format;prefs.testSetup=true;loadExam();setPrefs();render();
+      page().querySelector('[data-format="'+prefs.testFormat+'"]')?.focus({preventScroll:true});return;
+    }
     if(b.dataset.kind){prefs.kind=b.dataset.kind;setPrefs();render();return;}
     if(b.dataset.goto!==undefined){go(Number(b.dataset.goto));return;}
     if(b.dataset.letter){pick(b.dataset.letter);return;}
@@ -384,14 +439,17 @@ function setHandlers(){
       case 'grade':grade(byId.get(ids[at]));break;
       case 'retry':retry();break;
       case 'to-practice':changeMode('practice');break;
-      case 'setup':stopClock();if(prefs.mode==='practice')prefs.practiceSetup=true;else prefs.wrongSetup=true;setPrefs();render();break;
+      case 'setup':stopClock();if(prefs.mode==='practice')prefs.practiceSetup=true;else if(prefs.mode==='test')prefs.testSetup=true;else prefs.wrongSetup=true;setPrefs();render();break;
+      case 'reset-practice':confirmPracticeReset();break;
       case 'set-shuffle':prefs.shuffle=!prefs.shuffle;setPrefs();render();page().querySelector('[role=switch]')?.focus({preventScroll:true});break;
       case 'start-practice':
         if(!prefs.practiceStarted||!!prefs.practiceSeed!==prefs.shuffle)prefs.practiceSeed=orderSeed(prefs.shuffle);
         prefs.practiceSetup=false;prefs.practiceStarted=true;setPrefs();render();startClock();break;
       case 'start-wrong':beginReview();prefs.wrongSetup=false;setPrefs();render();startClock();break;
       case 'setup-test':prefs.testSetup=true;setPrefs();render();break;
-      case 'start-test':if(!exam||exam.finished){exam=newTest(questions,Date.now(),orderSeed(prefs.shuffle));prefs.testSetup=false;saveExam();setPrefs();render();}break;
+      case 'start-test':
+        if(!exam||exam.finished){exam=newTest(questions,Date.now(),orderSeed(prefs.shuffle),prefs.testFormat);saveExam();}
+        prefs.testSetup=false;setPrefs();render();break;
       case 'finish':finish();break;
       case 'inspect':go(0);break;
       case 'summary':prefs.testSetup=false;exam.view='summary';saveExam();setPrefs();render();break;
@@ -415,6 +473,11 @@ function setHandlers(){
     Neutralino.events.on('windowClose',closeApp);
   }
 }
+function loadExam(){
+  const test=readCourse(examKey()),length=prefs.testFormat==='full'?questions.length:testLength;
+  exam=Array.isArray(test?.ids)&&(test.format??'random')===prefs.testFormat&&test.ids.length===length&&
+    new Set(test.ids).size===length&&test.ids.every(id=>byId.has(id))&&test.picks?test:null;
+}
 function openBank(id){
   bankId=id;const bank=banks.get(id);
   questions=bank.questions;byId=new Map(questions.map(q=>[q.id,q]));chapters=new Map((bank.chapters||[]).map(c=>[c.id,c]));
@@ -423,16 +486,20 @@ function openBank(id){
   if(Object.hasOwn(modes,p.mode))prefs.mode=p.mode;
   if(['all','single','multi'].includes(p.kind))prefs.kind=p.kind;
   if(chapters.has(p.chapter))prefs.chapter=p.chapter;
+  if(id==='mao'&&p.testFormat==='full')prefs.testFormat='full';
+  if(Number.isSafeInteger(p.practiceEpoch)&&p.practiceEpoch>=0)prefs.practiceEpoch=p.practiceEpoch;
   prefs.place=p.place||{};prefs.theme=p.theme||'system';
   if(['practice','wrong','test'].includes(p.returnMode))prefs.returnMode=p.returnMode;
   for(const key of ['shuffle','practiceSetup','wrongSetup','testSetup','practiceStarted'])if(typeof p[key]==='boolean')prefs[key]=p[key];
   prefs.practiceSeed=p.practiceSeed>>>0;
   for(const q of questions){const r=readCourse('q_'+q.id);if(r&&typeof r.picked==='string')records[q.id]=r;}
-  const test=readCourse('exam'),last=readCourse('review');
-  if(Array.isArray(test?.ids)&&test.ids.length===testLength&&test.ids.every(key=>byId.has(key))&&test.picks)exam=test;
+  loadExam();
+  const last=readCourse('review');
   if(Array.isArray(last?.ids)&&last.attempts&&last.ids.every(key=>byId.has(key)))review=last;
   else if(prefs.mode==='wrong')beginReview();
-  practiceMs=Number.isFinite(readCourse('practice_time'))?readCourse('practice_time'):0;
+  const time=readCourse('practice_time');
+  if(time?.epoch===prefs.practiceEpoch&&Number.isFinite(time.ms))practiceMs=time.ms;
+  else practiceMs=prefs.practiceEpoch===0&&Number.isFinite(time)?time:0;
 }
 function switchBank(id){
   if(id===bankId||!banks.has(id))return;

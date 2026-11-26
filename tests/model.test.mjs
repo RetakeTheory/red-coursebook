@@ -41,6 +41,20 @@ test('A Mao test draws and scores only its own questions',()=>{
     assert.deepEqual(testResult(exam,lookup),{right:20,wrong:0,score:60,max:60});
   }
 });
+test('The full Mao exam covers every chapter once in source order and gives three points per question',()=>{
+  const questions=mao.questions,lookup=new Map(questions.map(q=>[q.id,q]));
+  const exam=newTest(questions,1000,91,'full');
+  assert.equal(exam.format,'full');
+  assert.deepEqual(exam.ids,questions.map(q=>q.id));
+  assert.equal(new Set(exam.ids).size,340);
+  assert.equal(exam.ids.filter(id=>lookup.get(id).kind==='single').length,197);
+  assert.deepEqual([...new Set(exam.ids.map(id=>lookup.get(id).chapter))],mao.chapters.map(c=>c.id));
+  assert.deepEqual(exam.picks,{});
+  for(const q of questions)exam.picks[q.id]=q.answer;
+  assert.deepEqual(testResult(exam,lookup),{right:340,wrong:0,score:1020,max:1020});
+  exam.picks.C01S17='AC';
+  assert.deepEqual(testResult(exam,lookup),{right:339,wrong:1,score:1017,max:1020});
+});
 test('All original positions, options and keys are present',()=>{
   assert.equal(byId.size,100);
   for(const [kind,count,keys] of [['single',70,'ABCD'],['multi',30,'ABCDE']]){

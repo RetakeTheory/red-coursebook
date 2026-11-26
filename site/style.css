@@ -77,3 +77,11 @@ main{min-width:0;min-height:0;overflow:auto;padding:clamp(20px,2.6vw,38px);scrol
 .question-meta{justify-content:flex-start;flex-wrap:wrap;gap:5px 8px}
 .question-meta .index{margin-left:auto;white-space:nowrap}
 .chapter-tag{display:inline-block;max-width:100%;padding:3px 10px;border-radius:999px;background:var(--nav);color:var(--muted);line-height:1.45;overflow-wrap:anywhere}
+.test-formats{max-width:100%;margin:2px 0 12px;background:var(--soft)}
+.test-formats button{padding:4px 10px}
+.reset-dialog{width:min(380px,calc(100vw - 32px));padding:22px;border:1px solid var(--line);border-radius:17px;background:var(--surface);color:var(--ink)}
+.reset-dialog::backdrop{background:rgb(10 24 40 / .48)}
+.reset-dialog h2{margin:0;font-size:20px;line-height:1.4}
+.reset-dialog p{margin:10px 0 20px;color:var(--muted)}
+.reset-dialog .action-group{justify-content:flex-end}
+.pill.danger{background:var(--red-soft);color:var(--red);border:1px solid var(--red)}
