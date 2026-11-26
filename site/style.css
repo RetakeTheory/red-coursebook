@@ -62,3 +62,18 @@ main{min-width:0;min-height:0;overflow:auto;padding:clamp(20px,2.6vw,38px);scrol
 @media(max-width:660px){main{padding:14px}.workspace{grid-template-columns:minmax(0,1fr) 142px;gap:8px}.right{padding:10px}.card{padding:14px}.grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.grid button{height:24px}.mode-nav button{padding:6px 7px}.filters button{font-size:12px;padding:5px}.nav-count{min-width:17px}.course-name{font-size:12px}.question-title{font-size:17px;margin:16px 0}.option{padding:8px;gap:7px}.legend{gap:3px}.panel-actions .pill{padding:7px 10px}}
 @media(max-width:550px){.left{flex-wrap:wrap;padding:5px 8px}.filters{margin-left:0}.titlebar{padding-left:10px}.workspace{grid-template-columns:1fr}.right{position:static;max-height:none}.grid{grid-template-columns:repeat(auto-fill,minmax(29px,1fr))}.window-title{gap:5px}.title-actions{gap:4px}.test-rules,.totals{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
+
+.course-context{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-bottom:7px}
+.course-switch{display:inline-flex;flex:none;padding:3px;gap:2px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.course-switch button{padding:3px 16px;border-radius:999px;color:var(--muted);font-size:13px;font-weight:650;line-height:1.55}
+.course-switch button:hover{background:var(--accent-soft)}
+.course-switch button[aria-pressed=true]{color:var(--on-primary);background:var(--primary)}
+.chapter-field{display:grid;gap:5px;margin:0 0 14px;font-size:13px;font-weight:600;color:var(--muted)}
+.chapter-control{display:flex;position:relative;align-items:center;max-width:100%;width:fit-content}
+.chapter-control select{appearance:none;box-sizing:border-box;width:100%;max-width:100%;padding:7px 32px;border:1px solid var(--strong-line);border-radius:999px;color:var(--ink);background:var(--soft);font:inherit;text-overflow:ellipsis;cursor:pointer}
+.chapter-control select:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.chapter-control .ic{position:absolute;pointer-events:none;width:14px;height:14px;left:11px}
+.chapter-control .ic:last-child{left:auto;right:11px}
+.question-meta{justify-content:flex-start;flex-wrap:wrap;gap:5px 8px}
+.question-meta .index{margin-left:auto;white-space:nowrap}
+.chapter-tag{display:inline-block;max-width:100%;padding:3px 10px;border-radius:999px;background:var(--nav);color:var(--muted);line-height:1.45;overflow-wrap:anywhere}

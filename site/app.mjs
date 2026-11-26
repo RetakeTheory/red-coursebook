@@ -8,29 +8,44 @@ const modes={practice:'练习模式',test:'测试模式',wrong:'错题本',credi
 const kinds={single:'单选题',multi:'多选题'};
 const themes={system:['monitor','跟随系统'],light:['sun','浅色'],dark:['moon','深色']};
 const scheme=matchMedia('(prefers-color-scheme: dark)');
-let questions=[],byId=new Map(),records={},prefs={mode:'practice',kind:'all',theme:'system',place:{},
-  shuffle:false,practiceSetup:true,wrongSetup:true,testSetup:false,practiceSeed:0,practiceStarted:false},exam=null;
+const bankFiles={xi:'bank.json',mao:'mao.json'},banks=new Map();
+const freshPrefs=()=>({mode:'practice',kind:'all',chapter:'all',theme:'system',place:{},
+  shuffle:false,practiceSetup:true,wrongSetup:true,testSetup:false,practiceSeed:0,practiceStarted:false});
+let bankId='xi',saved={},questions=[],byId=new Map(),chapters=new Map(),records={},prefs=freshPrefs(),exam=null;
 let review={ids:[],at:0,attempts:{},elapsed:0},practiceMs=0,tickStart=null,booted=false,busy=false;
 const page=()=>$('desk');
 const announce=msg=>{$('announce').textContent=msg;};
-const setPrefs=()=>save('prefs',prefs);
-const saveRecord=id=>save('q_'+id,records[id]);
-const saveReview=()=>save('review',review);
-const saveExam=()=>save('exam',exam);
+// The original bank keeps its 1.0.x storage keys so an upgrade resumes existing work.
+const bankKey=key=>bankId==='xi'?key:bankId+'_'+key;
+const readCourse=key=>saved[bankKey(key)];
+function saveCourse(key,value){const name=bankKey(key);saved[name]=value;return save(name,value);}
+const setPrefs=()=>saveCourse('prefs',prefs);
+const saveLibrary=()=>save('library',{bank:bankId,theme:prefs.theme});
+const saveRecord=id=>saveCourse('q_'+id,records[id]);
+const saveReview=()=>saveCourse('review',review);
+const saveExam=()=>saveCourse('exam',exam);
 const record=id=>records[id]||(records[id]={picked:'',graded:false,wrong:false});
 const mistakes=()=>questions.filter(q=>records[q.id]?.wrong).map(q=>q.id);
 const wrongNumber=()=>mistakes().length;
 const clipped=(n,len)=>Math.max(0,Math.min(Number.isInteger(n)?n:0,len-1));
 const settingUp=()=>prefs.mode==='practice'?prefs.practiceSetup:prefs.mode==='wrong'?prefs.wrongSetup:!exam||prefs.testSetup;
 const currentSeed=()=>prefs.mode==='practice'?prefs.practiceSeed:prefs.mode==='wrong'?review.seed:exam.seed;
+const practicePool=()=>prefs.chapter==='all'?questions:questions.filter(q=>q.chapter===prefs.chapter);
+const placeKey=()=>prefs.chapter==='all'?prefs.kind:prefs.chapter+'_'+prefs.kind;
+const chapterName=c=>c.title?c.label+'　'+c.title:c.label;
+function kindCounts(){
+  const counts={all:0,single:0,multi:0};
+  for(const q of practicePool()){counts.all++;counts[q.kind]++;}
+  return counts;
+}
 
 function panelIds(){
   if(prefs.mode==='test')return exam?.ids||[];
   if(prefs.mode==='wrong')return review.ids;
-  return questions.filter(q=>prefs.kind==='all'||q.kind===prefs.kind).map(q=>q.id);
+  return practicePool().filter(q=>prefs.kind==='all'||q.kind===prefs.kind).map(q=>q.id);
 }
 function currentIndex(ids=panelIds()){
-  const i=prefs.mode==='test'?exam?.at:prefs.mode==='wrong'?review.at:ids.indexOf(prefs.place[prefs.kind]);
+  const i=prefs.mode==='test'?exam?.at:prefs.mode==='wrong'?review.at:ids.indexOf(prefs.place[placeKey()]);
   return clipped(i,ids.length);
 }
 function entry(id){
@@ -51,7 +66,7 @@ function stopClock(){
   if(tickStart===null)return;
   const delta=Math.max(0,performance.now()-tickStart);tickStart=null;
   if(prefs.mode==='wrong'){review.elapsed+=delta;saveReview();}
-  else if(prefs.mode==='practice'){practiceMs+=delta;save('practice_time',practiceMs);}
+  else if(prefs.mode==='practice'){practiceMs+=delta;saveCourse('practice_time',practiceMs);}
 }
 function startClock(){if(tickStart===null&&timerActive())tickStart=performance.now();}
 function elapsed(){
@@ -77,7 +92,7 @@ function go(i){
   i=clipped(i,ids.length);
   if(prefs.mode==='test'){exam.at=i;if(exam.finished)exam.view='review';saveExam();}
   else if(prefs.mode==='wrong'){review.at=i;saveReview();}
-  else{prefs.place[prefs.kind]=ids[i];setPrefs();}
+  else{prefs.place[placeKey()]=ids[i];setPrefs();}
   render();page().scrollIntoView({block:'nearest'});const heading=page().querySelector('.question-title');heading?.focus({preventScroll:true});
 }
 function beginReview(){
@@ -135,8 +150,20 @@ function practiceForm(wrong){
   const box=el('article','card welcome'),sym=el('div','mode-symbol');sym.append(icon(wrong?'bookmark':'book'));
   box.append(sym,el('h2','',wrong?'错题重练':'开始练习'),el('p','',wrong?'当前有 '+wrongNumber()+' 道错题。答对一题，错题本就少一题。':'单选点选后立即判题，多选选齐后确认答案。'));
   if(!wrong){
+    if(chapters.size){
+      const label=el('label','chapter-field'),control=el('span','chapter-control'),select=el('select');
+      select.id='practice-chapter';
+      for(const [value,name] of [['all','全部章节'],...[...chapters.values()].map(c=>[c.id,chapterName(c)])]){
+        const opt=el('option','',name);opt.value=value;select.append(opt);
+      }
+      select.value=prefs.chapter;
+      control.append(icon('book'),select,icon('down'));
+      label.append(el('span','','练习章节'),control);box.append(label);
+    }
+    const counts=kindCounts();
     const group=el('div','setup-kinds');group.setAttribute('role','group');group.setAttribute('aria-label','练习题型');
-    for(const [key,name,n] of [['all','全部题目',100],['single','单选题',70],['multi','多选题',30]]){
+    for(const [key,n] of Object.entries(counts)){
+      const name=kinds[key]||'全部题目';
       const b=el('button','type-choice');b.type='button';b.dataset.kind=key;b.setAttribute('aria-pressed',String(prefs.kind===key));b.append(el('strong','',name),el('span','',n+' 题'));group.append(b);
     }
     box.append(group);
@@ -145,7 +172,7 @@ function practiceForm(wrong){
 }
 function testForm(){
   const box=el('article','card welcome'),sym=el('div','mode-symbol');sym.append(icon('paper'));
-  box.append(sym,el('h2','','随机组卷'),el('p','','从本期题库抽取 20 道题。作答期间可以改选，交卷后查看得分和逐题答案。'));
+  box.append(sym,el('h2','','随机组卷'),el('p','','从当前课程的完整题库抽取 20 道题。作答期间可以改选，交卷后查看得分和逐题答案。'));
   const list=el('div','test-rules');
   for(const [glyph,label,value] of [['list','单选题',testCounts.single+' 道'],['multiple','多选题',testCounts.multi+' 道'],['award','试卷满分',testLength*pointsPerQuestion+' 分']]){
     const item=el('div','test-rule');item.append(icon(glyph),el('small','',label),el('strong','',value));list.append(item);
@@ -223,10 +250,18 @@ function credits(){
 function questionCard(q,ids,at){
   const e=entry(q.id),isTest=prefs.mode==='test',correct=e.picked===q.answer;
   const box=el('article','card question'),meta=el('div','question-meta'),index=el('div','index');
-  const number=isTest?at+1:q.number;
-  const total=isTest?ids.length:(q.kind==='single'?70:30);
+  const sequence=isTest||chapters.size>0;
+  const number=sequence?at+1:q.number;
+  const total=sequence?ids.length:questions.filter(item=>item.kind===q.kind).length;
   index.append('第',el('strong','',String(number).padStart(2,'0')),icon('slash'),String(total)+' 题');
-  meta.append(el('span','badge '+q.kind,kinds[q.kind]),index);
+  meta.append(el('span','badge '+q.kind,kinds[q.kind]));
+  const chapter=chapters.get(q.chapter);
+  if(chapter){
+    const tag=el('span','chapter-tag',chapterName(chapter));
+    tag.title=chapterName(chapter)+' / 原题 '+kinds[q.sourceKind||q.kind]+' '+q.number;
+    meta.append(tag);
+  }
+  meta.append(index);
   const title=el('h2','question-title');title.tabIndex=-1;title.append(questionText(q.stem));
   box.append(meta,title);
   const opts=el('div','options');opts.setAttribute('role','group');opts.setAttribute('aria-label',kinds[q.kind]);
@@ -279,20 +314,29 @@ function renderRight(ids,at){
   const entries=isTest&&!testDone?[['current','当前'],['marked','已答'],['empty','未答']]:[['current','当前'],['correct','答对'],['mistake','答错'],['empty','未答']];
   for(const [glyph,text] of entries){const l=el('span');l.append(icon(glyph,glyph==='correct'?'good-mark':glyph==='mistake'?'bad-mark':''),text);legend.append(l);}
   holder.append(legend);
-  for(const kind of ['single','multi']){
-    const group=ids.map((id,i)=>[byId.get(id),i]).filter(([q])=>q.kind===kind);if(!group.length)continue;
-    holder.append(el('h3','',kinds[kind]));const grid=el('div','grid');
+  const perChapter=chapters.size>0&&!isTest;
+  const groups=perChapter?[...chapters.values()].map(c=>[c.id,chapterName(c)]):Object.entries(kinds);
+  const indexed=ids.map((id,i)=>[byId.get(id),i]);
+  for(const [key,name] of groups){
+    const group=indexed.filter(([q])=>(perChapter?q.chapter:q.kind)===key);if(!group.length)continue;
+    holder.append(el('h3','',name));const grid=el('div','grid');
     for(const [q,i] of group){
-      const num=isTest?i+1:q.number,s=status(q.id),b=el('button','',String(num).padStart(2,'0'));
+      const num=isTest||perChapter?i+1:q.number,s=status(q.id),b=el('button','',String(num).padStart(2,'0'));
       b.type='button';b.dataset.goto=String(i);b.dataset.status=s;
       if(i===at&&(!isTest||exam.view!=='summary'))b.setAttribute('aria-current','true');
-      b.setAttribute('aria-label',kinds[kind]+'第 '+num+' 题，'+({right:'答对',wrong:'答错',answered:'已答',draft:'待确认',empty:'未答'}[s]));
+      b.setAttribute('aria-label',(perChapter?chapters.get(q.chapter).label+' ':'')+kinds[q.kind]+'第 '+num+' 题，'+({right:'答对',wrong:'答错',answered:'已答',draft:'待确认',empty:'未答'}[s]));
       grid.append(b);
     }
     holder.append(grid);
   }
 }
 function render(){
+  const bank=banks.get(bankId);
+  $('course-name').textContent=bank.course;$('term').textContent=bank.term;
+  $('course-context').hidden=prefs.mode==='credits';
+  for(const b of document.querySelectorAll('[data-bank]'))b.setAttribute('aria-pressed',String(b.dataset.bank===bankId));
+  const counts=kindCounts();
+  for(const b of $('filters').querySelectorAll('[data-kind]'))b.lastElementChild.textContent=String(counts[b.dataset.kind]);
   $('mode-title').textContent=modes[prefs.mode];$('wrong-count').textContent=String(wrongNumber());
   for(const b of document.querySelectorAll('[data-mode]')){if(prefs.mode===b.dataset.mode)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
   const onCredits=prefs.mode==='credits';$('side').hidden=onCredits;page().parentElement.classList.toggle('solo',onCredits);
@@ -324,9 +368,10 @@ function setHandlers(){
     const b=event.target.closest('button');
     if(!$('theme-menu').hidden&&b!==$('theme')){$('theme-menu').hidden=true;$('theme').setAttribute('aria-expanded','false');}
     if(!b||b.disabled)return;
-    if(b.dataset.theme){theme(b.dataset.theme);setPrefs();return;}
+    if(b.dataset.theme){theme(b.dataset.theme);if(booted){setPrefs();saveLibrary();}return;}
     if(b.dataset.window){void windowAction(b.dataset.window);return;}
     if(!booted)return;
+    if(b.dataset.bank){switchBank(b.dataset.bank);return;}
     if(b.dataset.mode){changeMode(b.dataset.mode);return;}
     if(b.dataset.kind){prefs.kind=b.dataset.kind;setPrefs();render();return;}
     if(b.dataset.goto!==undefined){go(Number(b.dataset.goto));return;}
@@ -353,6 +398,12 @@ function setHandlers(){
       case 'refresh-wrong':stopClock();prefs.wrongSetup=true;setPrefs();render();break;
     }
   });
+  document.addEventListener('change',event=>{
+    if(event.target.id!=='practice-chapter'||!booted)return;
+    const id=event.target.value;
+    if(id!=='all'&&!chapters.has(id))return;
+    prefs.chapter=id;setPrefs();render();$('practice-chapter')?.focus({preventScroll:true});
+  });
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('theme-menu').hidden){$('theme-menu').hidden=true;$('theme').setAttribute('aria-expanded','false');$('theme').focus();}});
   scheme.addEventListener('change',()=>theme(prefs.theme));
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopClock();else startClock();});
@@ -364,24 +415,41 @@ function setHandlers(){
     Neutralino.events.on('windowClose',closeApp);
   }
 }
+function openBank(id){
+  bankId=id;const bank=banks.get(id);
+  questions=bank.questions;byId=new Map(questions.map(q=>[q.id,q]));chapters=new Map((bank.chapters||[]).map(c=>[c.id,c]));
+  prefs=freshPrefs();records={};exam=null;review={ids:[],at:0,attempts:{},elapsed:0};
+  const p=readCourse('prefs')||{};
+  if(Object.hasOwn(modes,p.mode))prefs.mode=p.mode;
+  if(['all','single','multi'].includes(p.kind))prefs.kind=p.kind;
+  if(chapters.has(p.chapter))prefs.chapter=p.chapter;
+  prefs.place=p.place||{};prefs.theme=p.theme||'system';
+  if(['practice','wrong','test'].includes(p.returnMode))prefs.returnMode=p.returnMode;
+  for(const key of ['shuffle','practiceSetup','wrongSetup','testSetup','practiceStarted'])if(typeof p[key]==='boolean')prefs[key]=p[key];
+  prefs.practiceSeed=p.practiceSeed>>>0;
+  for(const q of questions){const r=readCourse('q_'+q.id);if(r&&typeof r.picked==='string')records[q.id]=r;}
+  const test=readCourse('exam'),last=readCourse('review');
+  if(Array.isArray(test?.ids)&&test.ids.length===testLength&&test.ids.every(key=>byId.has(key))&&test.picks)exam=test;
+  if(Array.isArray(last?.ids)&&last.attempts&&last.ids.every(key=>byId.has(key)))review=last;
+  else if(prefs.mode==='wrong')beginReview();
+  practiceMs=Number.isFinite(readCourse('practice_time'))?readCourse('practice_time'):0;
+}
+function switchBank(id){
+  if(id===bankId||!banks.has(id))return;
+  stopClock();const mode=prefs.mode,appearance=prefs.theme;
+  openBank(id);
+  prefs.mode=mode;if(mode==='wrong')prefs.wrongSetup=true;
+  theme(appearance);setPrefs();saveLibrary();render();startClock();$('main').scrollTop=0;
+}
 async function init(){
   setHandlers();
-  const [res,data]=await Promise.all([fetch('bank.json'),restore()]);
-  if(!res.ok)throw Error('题库加载失败');
-  questions=(await res.json()).questions;byId=new Map(questions.map(q=>[q.id,q]));
-  if(data.prefs){
-    if(Object.hasOwn(modes,data.prefs.mode))prefs.mode=data.prefs.mode;
-    if(['all','single','multi'].includes(data.prefs.kind))prefs.kind=data.prefs.kind;
-    prefs.place=data.prefs.place||{};prefs.theme=data.prefs.theme;if(['practice','wrong','test'].includes(data.prefs.returnMode))prefs.returnMode=data.prefs.returnMode;
-    for(const key of ['shuffle','practiceSetup','wrongSetup','testSetup','practiceStarted'])if(typeof data.prefs[key]==='boolean')prefs[key]=data.prefs[key];
-    prefs.practiceSeed=data.prefs.practiceSeed>>>0;
-  }
-  for(const q of questions){const r=data['q_'+q.id];if(r&&typeof r.picked==='string')records[q.id]=r;}
-  if(Array.isArray(data.exam?.ids)&&data.exam.ids.length===20&&data.exam.ids.every(id=>byId.has(id))&&data.exam.picks)exam=data.exam;
-  if(Array.isArray(data.review?.ids)&&data.review.attempts&&data.review.ids.every(id=>byId.has(id)))review=data.review;
-  else if(prefs.mode==='wrong')beginReview();
-  practiceMs=Number.isFinite(data.practice_time)?data.practice_time:0;
-  theme(prefs.theme);booted=true;render();startClock();
+  const [entries,data]=await Promise.all([Promise.all(Object.entries(bankFiles).map(async([id,file])=>{
+    const res=await fetch(file);if(!res.ok)throw Error('题库加载失败');
+    return [id,await res.json()];
+  })),restore()]);
+  for(const [id,bank] of entries)banks.set(id,bank);
+  saved=data;openBank(banks.has(data.library?.bank)?data.library.bank:'xi');
+  theme(data.library?.theme||prefs.theme);booted=true;render();startClock();
   setInterval(clockUpdate,1000);
   setInterval(()=>{if(tickStart!==null){stopClock();startClock();}},10000);
 }

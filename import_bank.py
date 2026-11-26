@@ -13,16 +13,20 @@ OPTION = re.compile(r"(?:^|(?<=\s))([A-E])\s*[.．、]\s*")
 KEY = re.compile(r"[（(]\s*([A-E](?:[\s、,，]*[A-E])*)\s*[）)]")
 
 
-def extract(path):
+def paragraphs(path):
     with ZipFile(path) as archive:
         doc = ElementTree.fromstring(archive.read("word/document.xml"))
+    for p in doc.find(NS + "body").iter(NS + "p"):
+        line = "".join((e.text or "") if e.tag == NS+"t" else " " if e.tag in (NS+"tab",NS+"br") else "" for e in p.iter()).strip()
+        if line:
+            yield line
+
+
+def extract(path):
     questions = []
     group = None
     current = None
-    for p in doc.find(NS + "body").iter(NS + "p"):
-        line = "".join((e.text or "") if e.tag == NS+"t" else " " if e.tag in (NS+"tab",NS+"br") else "" for e in p.iter()).strip()
-        if not line:
-            continue
+    for line in paragraphs(path):
         if line in ("单选题", "多选题"):
             group = {"单选题": "single", "多选题": "multi"}[line]
             current = None

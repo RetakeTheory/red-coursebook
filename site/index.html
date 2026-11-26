@@ -24,7 +24,7 @@
   </header>
   <div class="shell">
     <aside class="left">
-      <div class="term"><span data-i="calendar"></span>2026 秋季</div>
+      <div class="term"><span data-i="calendar"></span><span id="term"></span></div>
       <nav class="mode-nav" aria-label="刷题模式">
         <button data-mode="practice"><span data-i="book"></span><span>练习模式</span></button>
         <button data-mode="test"><span data-i="paper"></span><span>测试模式</span></button>
@@ -32,15 +32,23 @@
       </nav>
       <section id="filters" class="filters" aria-label="练习题型">
         <h2>题型</h2>
-        <button data-kind="all"><span>全部题目</span><span>100</span></button>
-        <button data-kind="single"><span>单选题</span><span>70</span></button>
-        <button data-kind="multi"><span>多选题</span><span>30</span></button>
+        <button data-kind="all"><span>全部题目</span><span></span></button>
+        <button data-kind="single"><span>单选题</span><span></span></button>
+        <button data-kind="multi"><span>多选题</span><span></span></button>
       </section>
       <button class="credits-link" data-mode="credits" aria-label="鸣谢"><span data-i="heart"></span><span>鸣谢</span></button>
       <div class="local-foot"><span data-i="device"></span><span id="storage-status" aria-live="polite">进度保存在本机</span></div>
     </aside>
     <main id="main">
-      <header class="course-header"><div class="course-name">习近平新时代中国特色社会主义思想概论</div><div class="page-heading"><h1 id="mode-title">练习模式</h1><button id="setup-button" class="quiet" data-action="setup" hidden><span data-i="swap"></span>练习设置</button></div></header>
+      <header class="course-header">
+        <div id="course-context" class="course-context">
+          <div class="course-switch" role="group" aria-label="选择题库">
+            <button type="button" data-bank="xi">习概</button><button type="button" data-bank="mao">毛概</button>
+          </div>
+          <span id="course-name" class="course-name"></span>
+        </div>
+        <div class="page-heading"><h1 id="mode-title">练习模式</h1><button id="setup-button" class="quiet" data-action="setup" hidden><span data-i="swap"></span>练习设置</button></div>
+      </header>
       <div class="workspace">
         <section id="desk" aria-label="题目与作答"><p>正在载入题库…</p></section>
         <aside class="right" id="side" aria-label="作答概况">
