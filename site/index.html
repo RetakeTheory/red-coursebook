@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>红课题本</title>
+  <link rel="icon" href="mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="neutralino.js"></script>
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <header class="titlebar">
+    <div class="window-title" id="drag"><img src="mark.svg" alt=""><strong>红课题本</strong></div>
+    <div class="title-actions">
+      <button id="theme" class="quiet" aria-haspopup="menu"><span data-i="monitor"></span><span id="theme-caption">跟随系统</span><span class="tiny-icon" data-i="down"></span></button>
+      <div id="theme-menu" role="menu" hidden></div>
+      <div id="window-buttons" hidden>
+        <button data-window="minimize" aria-label="最小化"><span data-i="min"></span></button>
+        <button data-window="maximize" aria-label="切换最大化"><span data-i="maximize"></span></button>
+        <button data-window="close" aria-label="关闭窗口"><span data-i="close"></span></button>
+      </div>
+    </div>
+  </header>
+  <div class="shell">
+    <aside class="left">
+      <div class="term"><span data-i="calendar"></span>2026 秋季</div>
+      <nav class="mode-nav" aria-label="刷题模式">
+        <button data-mode="practice"><span data-i="book"></span><span>练习模式</span></button>
+        <button data-mode="test"><span data-i="paper"></span><span>测试模式</span></button>
+        <button data-mode="wrong"><span data-i="bookmark"></span><span>错题本</span><b id="wrong-count" class="nav-count">0</b></button>
+      </nav>
+      <section id="filters" class="filters" aria-label="练习题型">
+        <h2>题型</h2>
+        <button data-kind="all"><span>全部题目</span><span>100</span></button>
+        <button data-kind="single"><span>单选题</span><span>70</span></button>
+        <button data-kind="multi"><span>多选题</span><span>30</span></button>
+      </section>
+      <button class="credits-link" data-mode="credits" aria-label="鸣谢"><span data-i="heart"></span><span>鸣谢</span></button>
+      <div class="local-foot"><span data-i="device"></span><span id="storage-status" aria-live="polite">进度保存在本机</span></div>
+    </aside>
+    <main id="main">
+      <header class="course-header"><div class="course-name">习近平新时代中国特色社会主义思想概论</div><div class="page-heading"><h1 id="mode-title">练习模式</h1><button id="setup-button" class="quiet" data-action="setup" hidden><span data-i="swap"></span>练习设置</button></div></header>
+      <div class="workspace">
+        <section id="desk" aria-label="题目与作答"><p>正在载入题库…</p></section>
+        <aside class="right" id="side" aria-label="作答概况">
+          <div class="right-head"><span data-i="grid"></span><h2>答题卡</h2></div>
+          <div id="progress"></div><div id="map"></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <div id="announce" class="sr" aria-live="polite"></div>
+  <script nomodule>document.getElementById('desk').textContent='请更新系统网页组件后重新打开题本。';</script>
+</body>
+</html>
