@@ -67,7 +67,7 @@ def main():
         for name in SHARED_ASSETS:
             shutil.copyfile(ROOT / "site" / name, assets / name)
         template = (ANDROID / "mobile/index.html").read_text("utf-8")
-        (assets / "index.html").write_text(template.replace("{{VERSION}}", version), encoding="utf-8")
+        (assets / "index.html").write_bytes(template.replace("{{VERSION}}", version).encode("utf-8"))
         shutil.copyfile(ANDROID / "mobile/mobile.css", assets / "mobile.css")
         npm = shutil.which("npm.cmd" if os.name == "nt" else "npm")
         if not npm:

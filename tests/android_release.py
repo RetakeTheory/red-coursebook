@@ -25,6 +25,10 @@ with ZipFile(published) as release, ZipFile(rebuilt) as source:
     names = {n for n in source.namelist() if n.startswith("assets/")}
     assert names == {n for n in release.namelist() if n.startswith("assets/")}
     for name in names:
-        assert release.read(name) == source.read(name), name
+        shipped, built = release.read(name), source.read(name)
+        # The Windows-built 1.3.0 entry page used CRLF. Later builds emit LF on every host.
+        if version == "1.3.0" and name == "assets/index.html":
+            shipped, built = shipped.replace(b"\r\n", b"\n"), built.replace(b"\r\n", b"\n")
+        assert shipped == built, name
     assert not any(n.startswith("lib/") for n in release.namelist())
 print(f"Verified Android {version}, signature, manifest and {len(names)} matching offline assets.")
