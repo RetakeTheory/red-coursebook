@@ -50,6 +50,7 @@ with tempfile.TemporaryDirectory(prefix="redcoursebook-check-") as tmp:
             yield proc,base
         finally:
             if proc.poll() is None:proc.terminate()
+            else:print("Desktop process exited with status",proc.returncode,flush=True)
             proc.wait(timeout=10)
 
     with launch(dict(x=-480,y=75,width=2480,height=1620)) as (proc,base):

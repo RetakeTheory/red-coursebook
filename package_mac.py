@@ -72,6 +72,8 @@ def slices(binary,verify=False):
 
 
 def package():
+    if not (BUILD/"mac-runtime/neutralino-mac_universal").is_file():
+        raise SystemExit("Prepare the corrected universal runtime on macOS, then run npm run build.")
     RELEASE.mkdir(exist_ok=True)
     exe=PRODUCT/"RedCoursebook-win_x64.exe"
     assert exe.read_bytes().startswith(b"MZ") and (ROOT/"site"/"bank.json").read_bytes() in exe.read_bytes()

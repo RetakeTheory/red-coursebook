@@ -19,7 +19,7 @@ jobs:
       matrix:
         runner: [macos-15, macos-15-intel]
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 12
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,6 +27,12 @@ jobs:
           node-version: '22'
       - name: Verify question bank and scoring
         run: npm test
+      - name: Cache the universal desktop runtime
+        if: github.event_name == 'push'
+        uses: actions/cache@v4
+        with:
+          path: build/mac-runtime/neutralino-mac_universal
+          key: coursebook-mac-universal-${{ hashFiles('prepare_mac_runtime.py', 'prepare_runtime.py') }}
       - name: Build the candidate application
         if: github.event_name == 'push'
         run: |
@@ -37,6 +43,13 @@ jobs:
           "$RUNNER_TEMP/book-venv/bin/pip" install Pillow
           "$RUNNER_TEMP/book-venv/bin/python" package_mac.py
           cp build/release/*-macOS*.zip "$RUNNER_TEMP/RedCoursebook-macOS-universal.zip"
+      - name: Share the runtime for cross-platform packaging
+        if: github.event_name == 'push' && matrix.runner == 'macos-15'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-universal-runtime
+          path: build/mac-runtime/neutralino-mac_universal
+          retention-days: 7
       - name: Download the shipped application
         if: github.event_name != 'push'
         env:

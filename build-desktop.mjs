@@ -1,4 +1,5 @@
 import {execFileSync} from 'node:child_process';
+import {existsSync} from 'node:fs';
 import {cp, mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import path from 'node:path';
@@ -18,7 +19,17 @@ try {
   for (const platform of ['win_x64.exe', 'mac_universal']) {
     const dir = path.join(stage, platform);
     const settings = structuredClone(config);
+    const binary = 'neutralino-' + platform;
+    let runtime = path.join(root, 'bin', binary);
     if (platform === 'mac_universal') {
+      runtime = path.join(build, 'mac-runtime', binary);
+      if (!existsSync(runtime)) {
+        if (process.platform !== 'darwin') {
+          console.log('To also build for macOS, provide the universal runtime from prepare_mac_runtime.py.');
+          continue;
+        }
+        execFileSync('python3', [path.join(root, 'prepare_mac_runtime.py')], {stdio: 'inherit'});
+      }
       // AppKit already expresses NSWindow frames in points on every display.
       Object.assign(settings.modes.window, {borderless: false, useLogicalPixels: false});
       settings.nativeAllowList = ['app.exit', 'storage.getKeys', 'storage.getData', 'storage.setData',
@@ -26,8 +37,7 @@ try {
     }
     await mkdir(path.join(dir, 'bin'), {recursive: true});
     await cp(path.join(root, 'site'), path.join(dir, 'site'), {recursive: true});
-    const binary = 'neutralino-' + platform;
-    await cp(path.join(root, 'bin', binary), path.join(dir, 'bin', binary));
+    await cp(runtime, path.join(dir, 'bin', binary));
     await writeFile(path.join(dir, 'neutralino.config.json'), platform === 'mac_universal'
       ? JSON.stringify(settings, null, 2) : await readFile(path.join(root, 'neutralino.config.json')));
     execFileSync(process.execPath, [cli, 'build', '--embed-resources'], {cwd: dir, stdio: 'inherit'});

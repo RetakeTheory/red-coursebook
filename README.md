@@ -42,12 +42,14 @@ npm test
 npm run build
 ```
 
-Windows 可执行文件位于 `build/dist/RedCoursebook/`。在 macOS 上可用以下命令生成通用应用包，命令需要 Pillow 和系统的 `codesign`。在 Windows 上打包 Mac 应用时，另需将 `rcodesign.exe` 加入 PATH 或放在 `build/` 内。
+Windows 可执行文件位于 `build/dist/RedCoursebook/`。在 macOS 上首次运行 `npm run build` 时需要 Xcode 命令行工具、CMake 和 Ninja。它从固定版本的 Neutralino 源码构建 Intel 窗口读取修复，并与官方 Apple Silicon 运行时合成通用文件。之后使用 Pillow 和系统的 `codesign` 打包。
 
 ```sh
 python -m pip install Pillow
 python package_mac.py
 ```
+
+如需在 Windows 为 Mac 打包，先从上述 macOS 构建复制 `build/mac-runtime/neutralino-mac_universal` 到相同位置，准备 `rcodesign.exe`，再运行 `npm run build` 和 `python package_mac.py`。
 
 Android 版使用系统 WebView，共用桌面版的题库和判分逻辑。构建时使用 JDK 17 或更新版本、Android SDK Platform 35 和 Build Tools 35.0.0。设置 `JAVA_HOME` 与 `ANDROID_HOME` 后，在项目根目录运行以下命令生成未签名 APK。
 
