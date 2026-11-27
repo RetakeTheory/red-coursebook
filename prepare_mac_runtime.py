@@ -50,7 +50,9 @@ def build():
         subprocess.run(["lipo", stock, "-thin", "arm64", "-output", arm], check=True)
         subprocess.run(["lipo", "-create", arm, source_root / "bin/neutralino-mac_x64",
                         "-output", universal], check=True)
-        subprocess.run(["lipo", "-verify_arch", "arm64", "x86_64", universal], check=True)
+        arches = subprocess.check_output(["lipo", "-archs", universal], text=True).split()
+        if set(arches) != {"arm64", "x86_64"}:
+            raise ValueError(f"Unexpected Mac runtime architectures: {arches}")
         OUTPUT.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(universal, OUTPUT)
 
