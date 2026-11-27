@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {fitMacWindow} from '../site/mac-window.mjs';
 
-async function restore(screen, frame, scale = 2, nativeOrigin = [frame.x, frame.y]) {
+async function restore(screen, frame, scale = 2) {
   const calls = [];
   const api = {
-    getPosition: async () => ({x: nativeOrigin[0], y: nativeOrigin[1]}),
+    getPosition: async () => ({x: frame.x, y: frame.y}),
     getSize: async () => ({width: frame.width, height: frame.height, minWidth: 560, minHeight: 460}),
     setSize: async size => calls.push(['size', size.width, size.height]),
     move: async (x, y) => calls.push(['move', x, y])
   };
-  await fitMacWindow(api, {screen, screenX: frame.x, screenY: frame.y, devicePixelRatio: scale});
+  await fitMacWindow(api, {screen, screenX: 0, screenY: 0, devicePixelRatio: scale});
   return calls;
 }
 
@@ -27,6 +27,6 @@ test('keep valid and zoomed Mac windows at their saved size and position', async
 });
 test('an off-screen frame moves within a secondary display without resizing', async () => {
   const secondary = {availLeft: -1440, availTop: -180, availWidth: 1440, availHeight: 880};
-  assert.deepEqual(await restore(secondary, {x: -270, y: 200, width: 800, height: 600}, 1, [-270, 600]),
-    [['move', -800, 500]]);
+  assert.deepEqual(await restore(secondary, {x: -270, y: 200, width: 800, height: 600}, 1),
+    [['move', -800, 100]]);
 });

@@ -39,7 +39,7 @@ func waitForFrame(_ matches: (CGRect) -> Bool) -> CGRect {
 }
 
 let application = NSRunningApplication(processIdentifier: pid)!
-application.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+application.activate(options: [.activateAllWindows])
 let before = waitForFrame { rect in workAreas.contains { $0.insetBy(dx: -1, dy: -1).contains(rect) } }
 print("Visible window \(before); screen scale \(NSScreen.main?.backingScaleFactor ?? 0)")
 if mode == "restore" { exit(0) }
