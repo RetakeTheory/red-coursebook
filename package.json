@@ -1,9 +1,9 @@
 {
   "name": "red-coursebook",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": true,
   "description": "红课题本桌面应用",
   "license": "MIT",
-  "scripts": {"test":"node --test tests/model.test.mjs","build":"neu build --embed-resources"},
+  "scripts": {"test":"node --test tests/model.test.mjs tests/mac-window.test.mjs","build":"node build-desktop.mjs"},
   "devDependencies": {"@neutralinojs/neu":"11.8.0","@neutralinojs/lib":"6.10.0"}
 }

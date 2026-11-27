@@ -1,6 +1,7 @@
 import {icon,questionText} from './icons.mjs';
 import {selectOption,newTest,testResult,clockText,orderSeed,orderedOptions,shownLetters,pointsPerQuestion,testCounts,testLength} from './model.mjs';
 import {native,restore,save,flush} from './store.mjs';
+import {fitMacWindow} from './mac-window.mjs';
 
 const $=id=>document.getElementById(id);
 const el=(tag,cls='',text='')=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n;};
@@ -472,9 +473,18 @@ function setHandlers(){
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopClock();else startClock();});
   window.addEventListener('pagehide',stopClock);
   if(native){
-    $('window-buttons').hidden=false;
-    $('drag').addEventListener('mousedown',e=>{if(e.button===0&&e.detail===1)void Neutralino.window.beginDrag(e.screenX,e.screenY);});
-    $('drag').addEventListener('dblclick',()=>void windowAction('maximize'));
+    if(window.NL_OS==='Darwin'){
+      const actions=$('theme').parentElement;
+      const setup=$('setup-button');
+      setup.before(actions);
+      actions.prepend(setup);
+      $('drag').parentElement.hidden=true;
+      void fitMacWindow(Neutralino.window,window).catch(error=>console.warn('窗口位置恢复失败',error));
+    }else{
+      $('window-buttons').hidden=false;
+      $('drag').addEventListener('mousedown',e=>{if(e.button===0&&e.detail===1)void Neutralino.window.beginDrag(e.screenX,e.screenY);});
+      $('drag').addEventListener('dblclick',()=>void windowAction('maximize'));
+    }
     Neutralino.events.on('windowClose',closeApp);
   }
 }

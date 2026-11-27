@@ -1,31 +1,48 @@
 name: Check macOS and Android release
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
         description: Release tag to verify
-        default: v1.3.0
+        default: v1.3.1
         required: true
 permissions:
   contents: read
 jobs:
   macos:
     runs-on: macos-15
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Verify question bank and scoring
-        run: node --test tests/model.test.mjs
+        run: npm test
+      - name: Build the candidate application
+        if: github.event_name == 'push'
+        run: |
+          npm ci
+          python3 prepare_runtime.py
+          npm run build
+          python3 -m venv "$RUNNER_TEMP/book-venv"
+          "$RUNNER_TEMP/book-venv/bin/pip" install Pillow
+          "$RUNNER_TEMP/book-venv/bin/python" package_mac.py
+          cp build/release/*-macOS*.zip "$RUNNER_TEMP/RedCoursebook-macOS-universal.zip"
       - name: Download the shipped application
+        if: github.event_name != 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: gh release download "$RELEASE_TAG" --pattern 'RedCoursebook-macOS-universal.zip' --dir "$RUNNER_TEMP"
-      - name: Verify and launch the released app
+      - name: Verify window dragging and saved-frame recovery
         run: python3 tests/macos_smoke.py "$RUNNER_TEMP/RedCoursebook-macOS-universal.zip"
   android:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
